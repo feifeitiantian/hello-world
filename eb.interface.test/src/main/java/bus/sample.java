@@ -2,10 +2,9 @@ package bus;
 
 import org.testng.annotations.Test;
 
-import java.io.IOException;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLConnection;
 
 /**
  * Created by chenbing1 on 2017/4/5.
@@ -14,34 +13,76 @@ public class sample {
 
     @Test
     public void testGetSample() throws IOException {
-        URL url = new URL("http://www.baidu.com");
+        String url = "http://www.baidu.com";
 
-        URLConnection rulConnection = url.openConnection();// 此处的urlConnection对象实际上是根据URL的
-// 请求协议(此处是http)生成的URLConnection类
-// 的子类HttpURLConnection,故此处最好将其转化
-// 为HttpURLConnection类型的对象,以便用到
-// HttpURLConnection更多的API.如下:
+        System.out.println(getJsonByInternet(url));
 
-        HttpURLConnection httpUrlConnection = (HttpURLConnection) rulConnection;
-        // 设定请求的方法为"POST"，默认是GET
-        httpUrlConnection.setRequestMethod("POST");
+        String urlPath ="www.baidu.com";
+        String content = "aaa";
+        System.out.println(postDownloadJson(urlPath,content));
 
-// 设置是否向httpUrlConnection输出，因为这个是post请求，参数要放在
-// http正文内，因此需要设为true, 默认情况下是false;
-        httpUrlConnection.setDoOutput(true);
+    }
 
-// 设置是否从httpUrlConnection读入，默认情况下是true;
-        httpUrlConnection.setDoInput(true);
+    public static String getJsonByInternet(String path){
+        try {
+            URL url = new URL(path.trim());
+            //打开连接
+            HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
 
-// Post 请求不能使用缓存
-        httpUrlConnection.setUseCaches(false);
+            if(200 == urlConnection.getResponseCode()){
+                //得到输入流
+                InputStream is =urlConnection.getInputStream();
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                byte[] buffer = new byte[1024];
+                int len = 0;
+                while(-1 != (len = is.read(buffer))){
+                    baos.write(buffer,0,len);
+                    baos.flush();
+                }
+                return baos.toString("utf-8");
+            }
+        }  catch (IOException e) {
+            e.printStackTrace();
+        }
 
-// 设定传送的内容类型是可序列化的java对象
-// (如果不设此项,在传送序列化对象时,当WEB服务默认的不是这种类型时可能抛java.io.EOFException)
-        httpUrlConnection.setRequestProperty("Content-type", "application/x-java-serialized-object");
+        return null;
+    }
 
-// 连接，从上述url.openConnection()至此的配置必须要在connect之前完成，
-        httpUrlConnection.connect();
-
+    //获取其他页面的数据
+    /**
+     * POST请求获取数据
+     */
+    public static String postDownloadJson(String path,String post){
+        URL url = null;
+        try {
+            url = new URL(path);
+            HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
+            httpURLConnection.setRequestMethod("POST");// 提交模式
+            // conn.setConnectTimeout(10000);//连接超时 单位毫秒
+            // conn.setReadTimeout(2000);//读取超时 单位毫秒
+            // 发送POST请求必须设置如下两行
+            httpURLConnection.setDoOutput(true);
+            httpURLConnection.setDoInput(true);
+            // 获取URLConnection对象对应的输出流
+            PrintWriter printWriter = new PrintWriter(httpURLConnection.getOutputStream());
+            // 发送请求参数
+            printWriter.write(post);//post的参数 xx=xx&yy=yy
+            // flush输出流的缓冲
+            printWriter.flush();
+            //开始获取数据
+            BufferedInputStream bis = new BufferedInputStream(httpURLConnection.getInputStream());
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            int len;
+            byte[] arr = new byte[1024];
+            while((len=bis.read(arr))!= -1){
+                bos.write(arr,0,len);
+                bos.flush();
+            }
+            bos.close();
+            return bos.toString("utf-8");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }
